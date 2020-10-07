@@ -25,6 +25,7 @@ from threadlocals.threadlocals import get_current_request
 
 from ecommerce.core.utils import get_cache_key, log_message_and_raise_validation_error
 from ecommerce.extensions.offer.constants import (
+    EMAIL_TEMPLATE_TYPES,
     NUDGE_EMAIL_TEMPLATE_TYPES,
     OFFER_ASSIGNED,
     OFFER_ASSIGNMENT_EMAIL_BOUNCED,
@@ -601,13 +602,6 @@ class AbstractBaseEmailTemplate(TimeStampedModel):
 
 
 class OfferAssignmentEmailTemplates(AbstractBaseEmailTemplate):
-    ASSIGN, REMIND, REVOKE = ('assign', 'remind', 'revoke')
-    EMAIL_TEMPLATE_TYPES = (
-        (ASSIGN, _('Assign')),
-        (REMIND, _('Remind')),
-        (REVOKE, _('Revoke')),
-    )
-
     enterprise_customer = models.UUIDField(help_text=_('UUID for an EnterpriseCustomer from the Enterprise Service.'))
     email_type = models.CharField(max_length=32, choices=EMAIL_TEMPLATE_TYPES)
 
@@ -622,6 +616,39 @@ class OfferAssignmentEmailTemplates(AbstractBaseEmailTemplate):
             ec=self.enterprise_customer,
             email_type=self.email_type,
             active=self.active
+        )
+
+
+class OfferAssignmentEmailSentRecord(TimeStampedModel):
+    enterprise_customer = models.UUIDField(help_text=_('UUID for an EnterpriseCustomer from the Enterprise Service.'))
+    email_type = models.CharField(max_length=32, choices=EMAIL_TEMPLATE_TYPES)
+    template = models.ForeignKey(
+        'offer.OfferAssignmentEmailTemplates',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        help_text=_('The ID of the template used to send email.')
+    )
+
+    @classmethod
+    def create_email_record(cls, enterprise_customer_uuid, email_type, template_id=None):
+        """
+        Create an instance of OfferAssignmentEmailSentRecord.
+        Arguments:
+            enterprise_customer_uuid (str): The uuid of the enterprise that sent the email
+            template_id (int): The id of the template used to send email
+            email_type (str): The type of the email sent e:g Assign, Remind or Revoke
+        """
+        return cls.objects.create(
+            enterprise_customer=enterprise_customer_uuid,
+            email_type=email_type,
+            template_id=template_id
+        )
+
+    def __str__(self):
+        return "{ec}-{email_type}".format(
+            ec=self.enterprise_customer,
+            email_type=self.email_type,
         )
 
 

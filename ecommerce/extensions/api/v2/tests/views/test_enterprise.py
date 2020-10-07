@@ -57,6 +57,7 @@ from ecommerce.tests.testcases import TestCase
 Basket = get_model('basket', 'Basket')
 Benefit = get_model('offer', 'Benefit')
 OfferAssignment = get_model('offer', 'OfferAssignment')
+OfferAssignmentEmailSentRecord = get_model('offer', 'OfferAssignmentEmailSentRecord')
 OfferAssignmentEmailTemplates = get_model('offer', 'OfferAssignmentEmailTemplates')
 Product = get_model('catalogue', 'Product')
 Voucher = get_model('voucher', 'Voucher')
@@ -2974,6 +2975,63 @@ class EnterpriseCouponViewSetRbacTests(
                 'email_closing': 'Email closing must be {} characters or less'.format(max_limit),
             }
         }
+
+    def _make_request(self, coupon_id, email_type, mock_path, request_data):
+        with mock.patch(mock_path):
+            response = self.get_response(
+                'POST',
+                '/api/v2/enterprise/coupons/{}/{action}/'.format(coupon_id, action=email_type),
+                request_data
+            )
+        return response
+
+    def _create_template(self, email_type):
+        """Helper method to create OfferAssignmentEmailTemplates instance with the given email type."""
+        return OfferAssignmentEmailTemplates.objects.create(
+            enterprise_customer=self.data['enterprise_customer']['id'],
+            email_type=email_type,
+            email_greeting=TEMPLATE_GREETING,
+            email_closing=TEMPLATE_CLOSING,
+            email_subject=TEMPLATE_SUBJECT,
+            active=True,
+            name='Test Template'
+        )
+
+    @ddt.data(
+        ('assign', 'ecommerce.extensions.offer.utils.send_offer_assignment_email.delay'),
+        ('remind', 'ecommerce.extensions.offer.utils.send_offer_update_email.delay'),
+        ('revoke', 'ecommerce.extensions.offer.utils.send_offer_update_email.delay'),
+    )
+    @ddt.unpack
+    def test_email_sent_record_created(self, email_type, mock_path):
+        """
+        Test that Assign/Remind/Revoke endpoints create an instance of OfferAssignmentEmailSentRecord with given data.
+        """
+        self.get_response('POST', ENTERPRISE_COUPONS_LINK, dict(self.data))
+        coupon = Product.objects.get(title=self.data['title'])
+        coupon_id = coupon.id
+        code = self.get_coupon_voucher(coupon).code
+        template = self._create_template(email_type)
+        template_id = template.id
+        request_data = {
+            'template': 'Test template',
+            'template_id': template_id,
+            'template_subject': TEMPLATE_SUBJECT,
+            'template_greeting': TEMPLATE_GREETING,
+            'template_closing': TEMPLATE_CLOSING,
+            'emails': ['test@edx.org'],
+            'codes': [code],
+            'assignments': [{'email': 'test@edx.org', 'code': code}]
+        }
+
+        # Verify that no record have been created yet
+        assert OfferAssignmentEmailSentRecord.objects.count() == 0
+
+        # call endpoint
+        resp = self._make_request(coupon_id, email_type, mock_path, request_data)
+        assert resp.status_code == status.HTTP_200_OK
+        # verify that record has been created
+        assert OfferAssignmentEmailSentRecord.objects.filter(email_type=email_type).count() == 1
 
 
 class OfferAssignmentSummaryViewSetTests(

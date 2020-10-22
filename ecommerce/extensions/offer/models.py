@@ -1,9 +1,9 @@
 
 import datetime
-from dateutil.relativedelta import relativedelta
 import logging
 import re
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -734,7 +734,7 @@ class CodeAssignmentNudgeEmails(TimeStampedModel):
             codes (list): list of voucher codes
             user_emails (listt): list of user emails
         """
-        cls.objects.filter(code__in=codes, user_email__in=user_emails, already_send=False).update(is_subscribed=False)
+        cls.objects.filter(code__in=codes, user_email__in=user_emails, already_sent=False).update(is_subscribed=False)
 
 
 from oscar.apps.offer.models import *  # noqa isort:skip pylint: disable=wildcard-import,unused-wildcard-import,wrong-import-position,wrong-import-order,ungrouped-imports

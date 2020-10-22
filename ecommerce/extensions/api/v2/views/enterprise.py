@@ -772,9 +772,10 @@ class EnterpriseCouponViewSet(CouponViewSet):
 
             # unsubscribe user from receiving nudge emails
             CodeAssignmentNudgeEmails.unsubscribe_from_nudging(
-                map(lambda item: item['code'], assignments),
-                map(lambda item: item['email'], assignments)
+                map(lambda assignment: assignment['code'], assignments),
+                map(lambda assignment: assignment['email'], assignments)
             )
+
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

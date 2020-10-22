@@ -1,4 +1,4 @@
-edX E-Commerce Service  |Travis|_ |Codecov|_
+edX E-Commerce Service |Travis|_ |Codecov|_
 ============================================
 .. |Travis| image:: https://travis-ci.com/edx/ecommerce.svg?branch=master
 .. _Travis: https://travis-ci.com/edx/ecommerce
